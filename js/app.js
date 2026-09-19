@@ -71,6 +71,25 @@ document.addEventListener('visibilitychange', () => {
 /* Die Zurück-Geste schließt erst das offene Blatt */
 addEventListener('popstate', () => { if (sheetOpen()) closeSheet(); });
 
+/* ---------------------------- Offline-Fähigkeit ---------------------------- */
+
+/* Der Service Worker (sw.js) legt die App vollständig in einen Cache, damit
+   sie auch ohne Netz startet. Er braucht http(s) — beim Doppelklick auf
+   index.html gibt es keinen, und das soll auch nichts weiter stören. */
+if ('serviceWorker' in navigator){
+  const hatteSW = !!navigator.serviceWorker.controller;
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+
+  /* Eine neue Fassung hat übernommen. Einmal neu laden, damit Markup und
+     Module aus demselben Satz stammen — aber nicht mitten im Putzen; beim
+     nächsten Start passt ohnehin wieder alles zusammen. */
+  let laedtNeu = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hatteSW || laedtNeu || anyTimerOpen()) return;
+    laedtNeu = true; location.reload();
+  });
+}
+
 /* --------------------------------- Start -------------------------------- */
 
 setSound(S.settings().sound);
