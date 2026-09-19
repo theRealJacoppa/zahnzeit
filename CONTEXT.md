@@ -1,16 +1,19 @@
 # Zahnzeit – Projektkontext
 
 Übergabe-Dokument, damit in einem neuen Chat ohne Rückfragen weitergearbeitet werden kann.
-Stand: 19.09.2026
+Stand: 20.09.2026
+
+**Live:** https://therealjacoppa.github.io/zahnzeit/
+**Repo:** https://github.com/theRealJacoppa/zahnzeit (öffentlich, Branch `main`)
 
 ---
 
 ## 1. Was die App ist
 
 Eine Webapp, die beim Aufbau einer täglichen Zahnputzroutine unterstützt. Läuft als
-Webapp auf dem iPhone (Safari → „Zum Home-Bildschirm"), gehostet über **GitHub Pages**.
-Die App ist öffentlich, alle Daten bleiben lokal auf dem Gerät — das ist so gewollt.
-Es gibt keinen Server, kein Konto, keine Anmeldung.
+Webapp auf dem iPhone (Safari → „Zum Home-Bildschirm"), veröffentlicht über
+**GitHub Pages**. Der Quelltext ist öffentlich, alle Daten bleiben lokal auf dem Gerät —
+das ist so gewollt. Es gibt keinen Server, kein Konto, keine Anmeldung.
 
 Vier Ansichten:
 
@@ -46,9 +49,12 @@ js/
 test/
   suggest.mjs           Prüft die Vorschlagslogik gegen konkrete Uhrzeiten
                         (node test/suggest.mjs – braucht nichts installiert)
-three.module.min.js     Three.js r186, lokal (nicht per CDN, damit es offline läuft)
+three.module.min.js     Three.js r186, lokal (nicht per CDN, damit kein Fremdserver nötig ist)
 three.core.js           Gehört zu Three.js r186
 zahn-2d.html            Ältere 2D-Fassung, nur noch Sicherheitsnetz
+README.md               Was Besucher auf GitHub sehen
+.nojekyll               Sagt GitHub Pages, die Dateien unverändert auszuliefern
+.gitignore              Hält .DS_Store und Editor-Kram aus dem Repo
 .claude/launch.json     Startkonfiguration für den Entwicklungsserver
 ```
 
@@ -57,7 +63,7 @@ Abhängigkeiten außer Three.js.
 
 ---
 
-## 3. Starten und testen
+## 3. Starten, testen und veröffentlichen
 
 **Doppelklick auf `index.html` funktioniert nicht** — Browser blockieren ES-Module bei
 `file://`. Die Seite zeigt dann nach 2,5 Sekunden einen Hinweis plus Link zur 2D-Version.
@@ -74,7 +80,34 @@ mit `Cache-Control: no-store` benutzen.
 
 Beim Testen in einem **versteckten Tab** drosselt der Browser auf ~1 Bild/s. Dann laufen
 alle Übergänge (Kieferöffnung, Ein-/Ausblenden, das Blatt von unten) sehr langsam und
-Bildschirmfotos zeigen Zwischenzustände. Das ist kein Fehler im Code.
+Bildschirmfotos zeigen Zwischenzustände. Das ist kein Fehler im Code. Dasselbe gilt für
+das Konfetti: es lässt sich per Bildschirmfoto kaum erwischen. Wer prüfen will, ob es
+läuft, misst am Canvas (Pixel mit Alpha > 10 zählen) statt zu knipsen — Aufbau ab 0,6 s,
+Höhepunkt bei 3 s, leer nach ~6 s.
+
+### Veröffentlichen
+
+Die Seite liegt auf **GitHub Pages**, Quelle ist Branch `main`, Ordner `/` (Wurzel).
+Es gibt keinen Build-Schritt und keine Action — GitHub liefert die Dateien direkt aus.
+Eine Änderung geht also so live:
+
+```bash
+git add -A && git commit -m "…" && git push
+```
+
+Nach ein bis zwei Minuten ist sie unter der Live-Adresse da. Der Fortschritt lässt sich
+verfolgen mit:
+
+```bash
+gh api repos/theRealJacoppa/zahnzeit/pages --jq '.status'
+```
+
+`built` heißt fertig, `building` läuft noch.
+
+**Warum alle Pfade relativ sein müssen:** Die App liegt unter `/zahnzeit/`, nicht auf der
+Wurzel der Domain. Ein `href="/css/app.css"` würde auf `therealjacoppa.github.io/css/…`
+zeigen und ins Leere laufen. Alles ist deshalb relativ verlinkt (`css/app.css`,
+`./store.js`, `../three.module.min.js`) — beim Hinzufügen von Dateien so beibehalten.
 
 ---
 
@@ -337,6 +370,12 @@ Das hier bitte **nicht** wieder einführen — wurde ausprobiert und ausdrückli
   zwischendurch auf „Heute" zurück; das zerriss den Ablauf.
 - **Konfetti nur bei Vollständigkeit.** Ein Jubel für eine halb erledigte Routine wäre
   eine Lüge und würde den Abschluss entwerten.
+- **Unterpfad statt Wurzel.** Das Repo heißt `zahnzeit`, nicht
+  `theRealJacoppa.github.io`. Der Hauptnamensraum des GitHub-Kontos bleibt damit frei.
+  Wer das später ändert, muss nichts am Code anfassen — alle Pfade sind relativ.
+- **Öffentliches Repo.** Bewusst so: Bei einem kostenlosen GitHub-Konto veröffentlicht
+  Pages nur aus öffentlichen Repositories. Der Quelltext ist einsehbar, die Daten des
+  Nutzers nicht — die verlassen das Gerät nie.
 
 Gewünschtes Erscheinungsbild insgesamt: warm, ästhetisch, flache Illustration.
 
@@ -360,11 +399,36 @@ Gewünschtes Erscheinungsbild insgesamt: warm, ästhetisch, flache Illustration.
 
 ## 12. Was noch offen ist
 
-Ideen, über die noch nicht entschieden wurde:
+### Angesprochen, aber noch nicht entschieden
 
-1. **Erinnerungen.** Ohne Server nur über lokale Benachrichtigungen möglich, die iOS für
+1. **Offline-Fähigkeit.** Three.js liegt lokal im Repo, es wird also kein Fremdserver
+   gebraucht — aber ohne Service Worker entscheidet allein der Browser-Cache, ob die App
+   ohne Netz startet. Im Funkloch kann sie leer bleiben. Eine kleine `sw.js`, die die
+   rund ein Dutzend Dateien beim ersten Start in den Cache legt, würde das lösen. Wurde
+   dem Nutzer angeboten, noch keine Antwort.
+2. **Lizenz.** Das Repo hat bewusst **keine** — damit gilt „alle Rechte vorbehalten".
+   Der Nutzer wurde darauf hingewiesen; MIT wäre die naheliegende Wahl, wenn er das
+   ändern will.
+3. **Datensicherung.** Die Daten liegen allein im `localStorage` des iPhones. Safari-
+   Daten löschen, App vom Homescreen entfernen oder ein neues Gerät — und die Historie
+   ist weg. Der Export in den Einstellungen ist die einzige Absicherung. Eine
+   Erinnerung, ihn regelmäßig zu nutzen, gibt es noch nicht.
+
+### Ideen fürs Weitere
+
+4. **Erinnerungen.** Ohne Server nur über lokale Benachrichtigungen möglich, die iOS für
    Webapps stark einschränkt. Müsste erst geprüft werden.
-2. **Mehrere Personen** auf einem Gerät.
-3. **Zahnarzttermine** als eigener Bereich mit Intervall-Erinnerung.
-4. **Bürstenwechsel** alle drei Monate erinnern.
-5. **Wochenrückblick** als eigene Ansicht statt nur Zahlen.
+5. **Mehrere Personen** auf einem Gerät.
+6. **Zahnarzttermine** als eigener Bereich mit Intervall-Erinnerung.
+7. **Bürstenwechsel** alle drei Monate erinnern.
+8. **Wochenrückblick** als eigene Ansicht statt nur Zahlen.
+9. **Web App Manifest** (`manifest.json`). Für iOS reichen die vorhandenen
+   `apple-mobile-web-app-*`-Meta-Tags; für Android wäre ein Manifest nötig, damit sich
+   die App dort sauber installieren lässt.
+
+### Wovon der Nutzer selbst gesagt hat, es müsse sich erst bewähren
+
+Statistik und Einstellungen sollen „im Alter getestet werden, ob sie so Bestand haben" —
+also ob die Gewichte des Routine-Werts (60 / 25 / 15), die Halbwertszeit von 14 Tagen und
+die 21-Tage-Aufbauphase sich nach einigen Wochen echter Nutzung richtig anfühlen. Bei
+Rückmeldungen dazu: die Stellschrauben stehen oben in `score.js`, siehe Abschnitt 6.
