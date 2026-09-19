@@ -292,7 +292,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:26px; hei
              transition:width .6s cubic-bezier(.4,0,.2,1)}
 
 /* Heatmap */
-.heat{display:flex; gap:3px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none}
+/* Oben und rechts Platz lassen: Der Ring um „heute" liegt außerhalb der
+   Zelle, und da die Karte immer ans rechte Ende gescrollt wird, säße er
+   sonst genau auf der Schnittkante und wäre angeschnitten. */
+.heat{display:flex; gap:3px; overflow-x:auto; padding:4px 4px 4px 0; scrollbar-width:none}
 .heat::-webkit-scrollbar{display:none}
 .heat .col{display:flex; flex-direction:column; gap:3px}
 .heat .cell{width:13px; height:13px; border-radius:3.5px; background:var(--heat-0); cursor:default}
@@ -303,7 +306,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:26px; hei
 .heat .cell.future{background:none}
 .heat .cell.today{box-shadow:0 0 0 2px var(--bg-1), 0 0 0 3.5px var(--accent)}
 .heatwrap{display:flex; gap:6px}
-.heatdays{display:flex; flex-direction:column; gap:3px; flex:none; padding-top:0}
+/* Dieselben 4px oben wie .heat, damit die Wochentage auf Höhe der Zeilen bleiben */
+.heatdays{display:flex; flex-direction:column; gap:3px; flex:none; padding-top:4px}
 .heatdays span{height:13px; font-size:9.5px; line-height:13px; color:var(--ink-dim); width:16px}
 .legend{display:flex; align-items:center; gap:7px; margin-top:11px; font-size:11.5px;
         color:var(--ink-dim); flex-wrap:wrap}
