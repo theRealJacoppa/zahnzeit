@@ -419,13 +419,17 @@ $('#runAux').addEventListener('click', () => {
 });
 
 $('#runSkip').addEventListener('click', () => {
-  if (run.mode !== 'kai') return;
+  if (run.mode !== 'kai' || kai.over) return;
   initAudio();
   const phaseMs = kai.totalMs / PHASES.length;
   const idx = Math.floor(kai.elapsed / phaseMs);
   kai.elapsed = Math.min(kai.totalMs, (idx+1) * phaseMs);
-  if (kai.running) kai.startWall = Date.now() - kai.elapsed;
-  else kaiTick();
+  if (kai.running){ kai.startWall = Date.now() - kai.elapsed; return; }
+  /* Pausiert übersprungen: die Schleife rechnet dann nicht mit, also muss
+     hier selbst abgeschlossen werden. Sonst stünde der Timer am Ende, ohne
+     fertig zu sein — und der nächste Tipp auf „Weiter" finge von vorn an. */
+  kaiTick();
+  kai.elapsed >= kai.totalMs ? kaiOver() : setCtl();
 });
 
 $('#runClose').addEventListener('click', askClose);
