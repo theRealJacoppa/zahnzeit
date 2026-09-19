@@ -45,10 +45,19 @@ js/
   confetti.js           Der Jubel am Ende
   model3d.js            Das 3D-Kiefermodell
   kai.js                Die sechs Phasen und ihre Beschriftungen
-  ui.js                 Blätter, Hinweise, Datumsformate, Escaping
+  care.js               Erinnerungen mit langem Abstand (Bürstenkopf, Zahnarzt)
+  ui.js                 Blätter, Hinweise, Datumsformate, Escaping, Symbolliste
 test/
+  all.mjs               Führt alle Testdateien aus (node test/all.mjs)
   suggest.mjs           Prüft die Vorschlagslogik gegen konkrete Uhrzeiten
-                        (node test/suggest.mjs – braucht nichts installiert)
+  score.mjs             Prüft, ab wann ein Block in den Wert einfließt
+  care.mjs              Prüft Monatsrechnung und Fälligkeit der Erinnerungen
+                        (alles reines Node, nichts zu installieren)
+sw.js                   Service Worker: legt die App für den Betrieb ohne Netz ab
+manifest.json           Web App Manifest (für die Installation unter Android)
+icon-180/192/512*.png   App-Symbole
+tools/mkicon.py         Erzeugt ebendiese Symbole neu (ohne Fremdpaket)
+devserver.py            Entwicklungsserver ohne Caching (python3 devserver.py)
 three.module.min.js     Three.js r186, lokal (nicht per CDN, damit kein Fremdserver nötig ist)
 three.core.js           Gehört zu Three.js r186
 zahn-2d.html            Ältere 2D-Fassung, nur noch Sicherheitsnetz
@@ -69,14 +78,28 @@ Abhängigkeiten außer Three.js.
 `file://`. Die Seite zeigt dann nach 2,5 Sekunden einen Hinweis plus Link zur 2D-Version.
 
 ```bash
-cd /Users/jakob.kreisberger/Claude/zahn_app && python3 -m http.server 8731
+cd /Users/jakob.kreisberger/Claude/zahn_app && python3 devserver.py
 ```
 
 Dann `http://localhost:8731` öffnen. Auf GitHub Pages läuft es direkt.
 
-**Beim Entwickeln:** `python3 -m http.server` sendet `Last-Modified`, der Browser cacht
-dann CSS und JS und zeigt Änderungen nicht an. Entweder hart neu laden oder einen Server
-mit `Cache-Control: no-store` benutzen.
+**Warum ein eigener Server:** `python3 -m http.server` sendet nur `Last-Modified`. Der
+Browser hält CSS und Module dann für frisch genug, zeigt Änderungen nicht an — und man
+sucht den Fehler im Code, wo keiner ist. `devserver.py` schickt `Cache-Control: no-store`
+und macht das Problem weg.
+
+Hat ein Browser die Dateien **vorher schon einmal** von `localhost:8731` geholt, hängen
+die alten Einträge trotzdem noch in seinem Cache; `no-store` verhindert nur neues
+Ablegen. In dem Fall hilft ein anderer Ursprung: `http://127.0.0.1:8731` öffnen.
+
+**Der Service Worker beim Entwickeln:** Er liefert nach dem ersten Start alles aus seinem
+eigenen Cache aus — Änderungen an CSS oder JS sind dann unsichtbar, bis `VERSION` in
+`sw.js` hochgezählt wird. Zum Testen einzelner Änderungen deshalb abmelden:
+
+```js
+for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+for (const k of await caches.keys()) await caches.delete(k);
+```
 
 Beim Testen in einem **versteckten Tab** drosselt der Browser auf ~1 Bild/s. Dann laufen
 alle Übergänge (Kieferöffnung, Ein-/Ausblenden, das Blatt von unten) sehr langsam und
@@ -94,6 +117,13 @@ Eine Änderung geht also so live:
 ```bash
 git add -A && git commit -m "…" && git push
 ```
+
+**Vorher aber zwei Dinge in `sw.js`**, sonst bekommt das iPhone die Änderung nie zu
+sehen, weil der Service Worker weiter aus seinem Cache ausliefert:
+
+1. **`VERSION` hochzählen.** Der Browser vergleicht `sw.js` Byte für Byte; ohne neue
+   Version installiert er nichts nach.
+2. **Neue Dateien in `ASSETS` eintragen.** Was dort fehlt, ist offline nicht da.
 
 Nach ein bis zwei Minuten ist sie unter der Live-Adresse da. Der Fortschritt lässt sich
 verfolgen mit:
@@ -121,7 +151,8 @@ Alles unter einem einzigen localStorage-Schlüssel `zz-v2`:
   settings: {
     sound, theme ('auto'|'light'|'dark'), hapticCues,
     items:  [ { id, name, icon, mode, seconds } ],
-    blocks: [ { id, name, icon, hint, items: [itemId, …] } ]
+    blocks: [ { id, name, icon, hint, items: [itemId, …] } ],
+    care:   [ { id, name, icon, months, last, on, snoozed } ]
   },
   log: { "2026-09-19": { morning: { brush: { at, timed, sec } } } }
 }
@@ -218,6 +249,13 @@ Zwei Eigenschaften, die für das Gefühl entscheidend sind:
 - **Der laufende Tag wird nie bestraft.** Ein Block zählt erst, wenn seine Richtzeit
   plus zwei Stunden Kulanz vorbei ist. Morgens um 8 zieht die noch offene Abendroutine
   den Wert also nicht herunter.
+- **Und der Tag endet nicht um Mitternacht.** `counts()` in `score.js` lässt einen Block
+  eines vergangenen Tages zusätzlich so lange stehen, wie `dayForBlock` eine Sitzung
+  *jetzt* noch auf diesen Tag buchen würde. Sonst widersprachen sich die beiden Hälften
+  der App: Um 0:30 schlug „Heute" die Abendroutine weiterhin als *Abends · Gestern* vor,
+  während die Statistik denselben Tag im selben Moment schon als versäumt abrechnete —
+  die Serie fiel schlagartig auf 0. Für den heutigen Tag greift die Regel bewusst nicht;
+  `dayForBlock` zeigt immer auf ihn, er käme sonst nie zur Abrechnung.
 - **Aufbauphase.** In den ersten 21 aufgezeichneten Tagen wird der Wert gedämpft
   (Faktor 0.55 → 1.0), damit er nicht nach einem einzigen guten Tag bei 90 steht.
 
@@ -334,6 +372,19 @@ Segmente im Säulendiagramm heißen deshalb `.part`.
 beginnen untereinander, ausgerichtet am längsten Namen. Jede Zeile als eigenes Grid zu
 setzen sieht im Code richtig aus, ergibt aber ausgefranste Balkenanfänge.
 
+**Seiten scrollen nie waagrecht.** `.page` setzt ausdrücklich `overflow-x:hidden`. Wird
+nur `overflow-y` gesetzt, nimmt `overflow-x` automatisch den Wert `auto` an — dann reicht
+ein einziges überstehendes Element, und die ganze Seite lässt sich seitlich wischen,
+obwohl dort nichts zu sehen ist. Genau das hatte die Hover-Beschriftung des
+Säulendiagramms ausgelöst: unsichtbar (`opacity:0`), aber im Layout und damit im
+Überstand. Sie hängt jetzt am Diagramm statt an der einzelnen Säule und steht mittig
+darüber. Was wirklich seitlich scrollt, bringt seinen eigenen Rahmen mit (`.heat`).
+
+**Der Ring um „heute"** in der Heatmap liegt als `box-shadow` außerhalb der Zelle.
+`.heat` hat deshalb oben und rechts 4 px Innenabstand — ohne den säße der Ring genau auf
+der Schnittkante des Scrollrahmens und wäre angeschnitten. `.heatdays` hat denselben
+Abstand oben, sonst rutschen die Wochentage gegen die Zeilen.
+
 **Zeiträume in der Aufschlüsselung** werden auf das begrenzt, was aufgezeichnet ist
 (`eff` in `stats.js`). Sonst rechnet sie in der ersten Woche gegen 30 Kalendertage und
 meldet 3 %, obwohl nichts versäumt wurde.
@@ -373,11 +424,66 @@ Das hier bitte **nicht** wieder einführen — wurde ausprobiert und ausdrückli
 - **Unterpfad statt Wurzel.** Das Repo heißt `zahnzeit`, nicht
   `theRealJacoppa.github.io`. Der Hauptnamensraum des GitHub-Kontos bleibt damit frei.
   Wer das später ändert, muss nichts am Code anfassen — alle Pfade sind relativ.
+- **Keine Benachrichtigungen.** Geprüft und verworfen, nicht vergessen: iOS erlaubt
+  Webapps keine zeitgesteuerten lokalen Mitteilungen, und Web Push (ab iOS 16.4, nur für
+  Homescreen-Apps) setzt einen Push-Dienst und damit einen Server voraus — den es hier
+  bewusst nicht gibt. Alles Erinnernde läuft deshalb über Karten auf „Heute".
 - **Öffentliches Repo.** Bewusst so: Bei einem kostenlosen GitHub-Konto veröffentlicht
   Pages nur aus öffentlichen Repositories. Der Quelltext ist einsehbar, die Daten des
   Nutzers nicht — die verlassen das Gerät nie.
 
 Gewünschtes Erscheinungsbild insgesamt: warm, ästhetisch, flache Illustration.
+
+---
+
+## 10a. Offline und Installation
+
+Ein **Service Worker** (`sw.js`) legt die rund zwei Dutzend Dateien beim ersten Start
+komplett ab. Ohne ihn entscheidet allein der Browser-Cache, ob die App ohne Netz
+startet — im Funkloch kann sie leer bleiben, und das ausgerechnet morgens im Bad.
+
+Die Strategie ist bewusst die einfachste, die nicht kaputtgehen kann: **ein versionierter
+Satz, der komplett ausgetauscht wird.** Beim Installieren wird alles aus `ASSETS` frisch
+geholt (`cache: 'reload'`, also am Browser-Cache vorbei); erst wenn das vollständig
+geklappt hat, übernimmt die neue Fassung und die alte wird weggeworfen. Ausgeliefert wird
+danach nur aus dem Cache. Dadurch passen Markup, CSS und Module immer zueinander — es
+kann nie ein neues `index.html` auf altes JavaScript treffen. Der Preis dafür steht in
+Abschnitt 3: **beim Veröffentlichen `VERSION` hochzählen und neue Dateien in `ASSETS`
+eintragen.**
+
+Übernimmt eine neue Fassung, lädt `app.js` die Seite einmal neu (`controllerchange`) —
+aber nie, während ein Timer läuft.
+
+Dazu ein **Web App Manifest** und PNG-Symbole. Für iOS zählt allein
+`<link rel="apple-touch-icon">`; ohne das nahm der Homescreen bisher ein Bildschirmfoto
+der Seite. Das Manifest ist für Android da, wo sich die App damit sauber installieren
+lässt. `tools/mkicon.py` erzeugt die Symbole neu, falls sich die Farbtoken ändern.
+
+---
+
+## 10b. Erinnerungen mit langem Abstand (`care.js`)
+
+Bürstenkopf alle drei Monate, Zahnarzt alle sechs — Dinge, die keine Tagesroutine sind.
+Die Mechanik ist dieselbe wie bei der Nachtfrage und dem Nachtrag-Hinweis: **eine Karte
+auf „Heute"**, sonst nichts.
+
+**Echte Benachrichtigungen gibt es nicht und kann es nicht geben.** iOS erlaubt Webapps
+keine zeitgesteuerten Mitteilungen; Web Push gibt es seit iOS 16.4 für Homescreen-Apps,
+braucht aber einen Push-Dienst und damit einen Server. Bei etwas, das alle drei Monate
+fällig ist, reicht die Karte: Die App wird ohnehin täglich geöffnet, und ein paar Tage
+Unschärfe spielen keine Rolle. Das ist eine Entscheidung, keine Lücke.
+
+Vier Zustände (`status()`): `off` abgeschaltet, `setup` eingeschaltet aber ohne Datum,
+`due` fällig, `ok` noch Zeit. Ohne `last` kann nicht erinnert werden — deshalb fragt die
+Karte einmal danach, statt ein Datum zu erfinden. „Später" verstummt sieben Tage
+(`snoozed`), „Nicht erinnern" schaltet ganz ab.
+
+**Rangfolge der Karten auf „Heute":** Nachtfrage → Nachtrag → Erinnerung. Es steht immer
+höchstens eine da. Die Erinnerungen stehen bewusst hinten: Sie können einen Tag warten,
+die Routine nicht.
+
+`addMonths()` klemmt den Überlauf — der 31. Januar plus ein Monat ist der 28. Februar,
+nicht der 3. März. `test/care.mjs` hält das fest.
 
 ---
 
@@ -387,13 +493,19 @@ Gewünschtes Erscheinungsbild insgesamt: warm, ästhetisch, flache Illustration.
   eine Tonfolge am Ende der ganzen Routine. Abschaltbar über die Glocke oder die Einstellungen.
 - **Vibration** beim Abhaken und an denselben Stellen wie der Ton, abschaltbar.
 - **Wake Lock:** Bildschirm bleibt an, solange ein Timer läuft.
-- **Zeitrechnung** läuft über `Date.now()`, nicht über Frames — der Putz-Timer bleibt
-  korrekt, wenn die App kurz in den Hintergrund geht.
+- **Zeitrechnung** läuft bei beiden Timern über `Date.now()`, nicht über Frames oder
+  heruntergezählte Intervalle — sie bleiben korrekt, wenn die App kurz in den Hintergrund
+  geht. Der Countdown leitet seine Restzeit aus `cd.endAt` ab und zieht beim Zurückkommen
+  sofort nach; ein Zähler `left -= 0.1` je Tick lief nach, weil iOS Intervalle im
+  Hintergrund drosselt oder ganz anhält.
 - **Render-Schleife läuft nur**, solange der Ablauf offen ist, und zeichnet das Modell
   nur auf der Putz-Bühne.
 - **Verlassen des Ablaufs** fragt nach, solange noch Schritte offen sind.
 - **Export / Import** der kompletten Daten als JSON-Datei.
-- **Zurückkommen aus dem Hintergrund** lässt die Automatik neu raten, welcher Block dran ist.
+- **Zurückkommen aus dem Hintergrund** lässt die Automatik neu raten, welcher Block dran
+  ist, und zieht die Countdown-Anzeige sofort auf die echte Restzeit nach.
+- **Offline** über `sw.js`, **Installation** über `manifest.json` — siehe Abschnitt 10a.
+- **Erinnerungen** mit langem Abstand über `care.js` — siehe Abschnitt 10b.
 
 ---
 

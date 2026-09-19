@@ -5,8 +5,11 @@ Eine Webapp, die beim Aufbau einer täglichen Zahnputzroutine hilft.
 Kern ist ein Putz-Timer im **KAI-Format** (Kauflächen → Außenflächen → Innenflächen,
 jeweils oben und unten) mit einem animierten 3D-Kiefermodell, an dem man sieht, welche
 Fläche gerade dran ist. Drumherum: eine Tagesansicht, die durch die eigene Routine führt,
-frei anlegbare Bausteine und Tageszeiten, und eine Statistik mit einem Routine-Wert
-von 0 bis 100.
+frei anlegbare Bausteine und Tageszeiten, Erinnerungen mit langem Abstand (Bürstenkopf,
+Zahnarzt) und eine Statistik mit einem Routine-Wert von 0 bis 100.
+
+Die App läuft **ohne Netz**: Ein Service Worker legt sie beim ersten Start vollständig
+ab, danach startet sie auch im Funkloch.
 
 ## Daten
 
@@ -27,15 +30,17 @@ auf `index.html` funktioniert allerdings nicht — Browser blockieren ES-Module 
 `file://`. Also über einen lokalen Server:
 
 ```bash
-python3 -m http.server 8731
+python3 devserver.py
 ```
 
-Dann `http://localhost:8731` öffnen.
+Dann `http://localhost:8731` öffnen. (`python3 -m http.server` tut es auch, cacht beim
+Entwickeln aber CSS und Module — `devserver.py` schickt deshalb `Cache-Control: no-store`.)
 
-Die Logik, die rät, welche Tageszeit gerade dran ist, hat einen eigenen Test:
+Die kniffligen Stellen haben eigene Tests — die Tageszuordnung, der Routine-Wert und
+die Erinnerungen. Sie brauchen nichts Installiertes:
 
 ```bash
-node test/suggest.mjs
+node test/all.mjs
 ```
 
 ## Aufbau
