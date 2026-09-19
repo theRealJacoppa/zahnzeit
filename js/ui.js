@@ -14,6 +14,9 @@ export const esc = s => String(s ?? '').replace(/[&<>"']/g,
 export const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 export const pct = v => Math.round(v*100) + '%';
 
+/* Die Symbolauswahl — von Bausteinen, Tageszeiten und Erinnerungen geteilt. */
+export const ICONS = ['🪥','🧵','🪡','👅','🫧','🦷','💧','⏱','🌅','☀️','🌙','⭐','🌿','🧊','✨','🫙','🧴','🔆','🌆','🛏'];
+
 /* ------------------------------ Blatt ------------------------------ */
 
 const sheet = $('#sheet'), panel = $('#sheetPanel');

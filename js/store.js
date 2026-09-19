@@ -41,6 +41,13 @@ const DEFAULTS = () => ({
       { id:'morning', name:'Morgens', icon:'🌅', hint:7,  items:['brush','tongue'] },
       { id:'noon',    name:'Mittags', icon:'☀️', hint:13, items:[] },
       { id:'evening', name:'Abends',  icon:'🌙', hint:21, items:['brush','floss','rinse'] }
+    ],
+    /* Erinnerungen mit langem Abstand (care.js). `last` ist ein Tagesschlüssel
+       oder null — ohne Datum kann nicht erinnert werden, danach fragt die App
+       einmal auf „Heute". */
+    care: [
+      { id:'head',    name:'Bürstenkopf wechseln', icon:'🪥', months:3, last:null, on:true, snoozed:0 },
+      { id:'dentist', name:'Zahnarzt-Kontrolle',   icon:'🦷', months:6, last:null, on:true, snoozed:0 }
     ]
   },
   /* log["2026-09-19"].morning.brush = { at, timed, sec } */
@@ -65,6 +72,8 @@ function migrate(raw){
   s.items = s.items.map(i => Object.assign({ mode:'check', seconds:60, icon:'•' }, i));
   s.blocks = s.blocks.map(b => Object.assign({ hint:12, icon:'•', items:[] }, b,
                           { items: (b.items || []).filter(id => s.items.some(i => i.id === id)) }));
+  if (!Array.isArray(s.care)) s.care = d.settings.care;
+  s.care = s.care.map(c => Object.assign({ icon:'⏱', months:3, last:null, on:true, snoozed:0 }, c));
   return { version:2, settings:s,
            log: raw.log && typeof raw.log === 'object' ? raw.log : {},
            ui:  raw.ui  && typeof raw.ui  === 'object' ? raw.ui  : {} };
@@ -90,6 +99,7 @@ export function onChange(fn){ listeners.add(fn); return () => listeners.delete(f
 export const settings = () => data.settings;
 export const log      = () => data.log;
 export const items    = () => data.settings.items;
+export const care     = () => data.settings.care;
 export const blocks   = () => data.settings.blocks;
 export const itemById = id => data.settings.items.find(i => i.id === id) || null;
 export const blockById= id => data.settings.blocks.find(b => b.id === id) || null;

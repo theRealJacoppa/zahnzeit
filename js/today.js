@@ -9,6 +9,7 @@
 
 import * as S from './store.js';
 import * as SC from './score.js';
+import * as Care from './care.js';
 import { $, esc, relDay, dateLong, toast, openSheet, closeSheet, buzz, clockLabel } from './ui.js';
 import { startRun } from './runner.js';
 
@@ -253,9 +254,12 @@ export function render(){
      was von ihr ablenkt. Der Nachtrag-Hinweis kommt danach von selbst. */
   const night = nightCard(now);
   const cu = night ? null : catchUp(now);
+  /* Die Erinnerungen haben den längsten Atem — sie treten hinter allem
+     zurück, was heute noch zu tun ist, und warten notfalls einen Tag. */
+  const care = (night || cu) ? null : Care.top(now);
 
   page.innerHTML = head(sc, now) + night
-    + catchUpCard(cu, now, todayKey, yestKey) + `
+    + catchUpCard(cu, now, todayKey, yestKey) + Care.card(care) + `
     <button class="blockpick" id="pick">
       <span class="big">${esc(block?.icon ?? '•')}</span>
       <span class="txt">
@@ -292,6 +296,8 @@ export function render(){
       toast(`${cu.block.name}: nicht weiter nachgefragt`);
     };
   }
+  Care.wireCard(page, care, now);
+
   const ctaEl = $('#cta', page);
   if (ctaEl) ctaEl.onclick = () => runStep(key, block, next);
 

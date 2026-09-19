@@ -7,14 +7,14 @@
    ===================================================================== */
 
 import * as S from './store.js';
+import * as Care from './care.js';
 import { $, esc, openSheet, closeSheet, confirmSheet, toast, durLabel,
-         clockLabel, clamp } from './ui.js';
+         clockLabel, clamp, ICONS } from './ui.js';
 
 const page = $('#pg-set');
 let applyTheme = () => {};
 export const bindTheme = fn => { applyTheme = fn; };
 
-const ICONS = ['🪥','🧵','🪡','👅','🫧','🦷','💧','⏱','🌅','☀️','🌙','⭐','🌿','🧊','✨','🫙','🧴','🔆','🌆','🛏'];
 const MODE_NOTE = {
   kai:   'Führt in sechs Phasen durch Kau-, Außen- und Innenflächen, mit dem Kiefermodell.',
   timer: 'Ein einfacher Countdown mit großem Ring – gut fürs Spülen.',
@@ -93,6 +93,8 @@ export function render(){
       </button>
     </div>
 
+    ${Care.section()}
+
     <h2>Daten</h2>
     <div class="rows">
       <button class="row" id="exp"><span class="emoji">📤</span>
@@ -163,6 +165,8 @@ function wire(kai){
     kai.seconds = clamp(kai.seconds + (+b.dataset.d)*30, 60, 600);
     S.commit(); render();
   });
+
+  Care.wireSettings(page, render);
 
   page.querySelectorAll('[data-item]').forEach(b => b.onclick = () => itemSheet(b.dataset.item));
   page.querySelectorAll('[data-block]').forEach(b => b.onclick = () => blockSheet(b.dataset.block));

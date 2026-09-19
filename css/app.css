@@ -179,7 +179,7 @@ button.row:active, .row.tap:active{background:var(--surface-2)}
 .stepper .v{min-width:62px; text-align:center; font-weight:650; font-size:15px;
             font-variant-numeric:tabular-nums}
 
-input[type=text], input[type=number], select{
+input[type=text], input[type=number], input[type=date], select{
   background:var(--surface-2); border:1px solid var(--line); color:var(--ink);
   border-radius:12px; padding:10px 12px; font-size:15px; width:100%;
   -webkit-appearance:none; appearance:none;
