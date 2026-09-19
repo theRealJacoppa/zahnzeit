@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zahnzeit">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F7E9D8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#231A15" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪥</text></svg>">
+<title>Zahnzeit</title>
+<style>
+  :root{
+    --bg-1:#FDF5EA; --bg-2:#F6E4CE; --bg-3:#F3D9C4;
+    --surface:rgba(255,253,248,.72);
+    --ink:#4A382E;
+    --ink-soft:#8E7360;
+    --line:rgba(74,56,46,.12);
+    --accent:#CE6F42;
+    --accent-2:#E79A62;
+    --accent-ink:#FFF8F0;
+    --tooth-a:#FFFEFB;
+    --tooth-b:#F0E1CC;
+    --tooth-edge:#CBB196;
+    --groove:#BFA184;
+    --gum-a:#E4A79A;
+    --gum-b:#D08D82;
+    --shadow:0 18px 40px -22px rgba(101,63,38,.55);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg-1:#2A1E18; --bg-2:#20160F; --bg-3:#180F0B;
+      --surface:rgba(62,45,36,.6);
+      --ink:#F6E8D9;
+      --ink-soft:#BBA18B;
+      --line:rgba(246,232,217,.14);
+      --accent:#E8946A;
+      --accent-2:#F0B084;
+      --accent-ink:#2A1A11;
+      --tooth-a:#FBF5EC;
+      --tooth-b:#D9C5AC;
+      --tooth-edge:#A38A6F;
+      --groove:#9A7F66;
+      --gum-a:#A0625A;
+      --gum-b:#834E48;
+      --shadow:0 18px 44px -24px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"]{
+      --bg-1:#2A1E18; --bg-2:#20160F; --bg-3:#180F0B;
+      --surface:rgba(62,45,36,.6);
+      --ink:#F6E8D9; --ink-soft:#BBA18B; --line:rgba(246,232,217,.14);
+      --accent:#E8946A; --accent-2:#F0B084; --accent-ink:#2A1A11;
+      --tooth-a:#FBF5EC; --tooth-b:#D9C5AC; --tooth-edge:#A38A6F; --groove:#9A7F66;
+      --gum-a:#A0625A; --gum-b:#834E48;
+      --shadow:0 18px 44px -24px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",Avenir,system-ui,sans-serif;
+    color:var(--ink);
+    background:radial-gradient(120% 80% at 50% -10%, var(--bg-1) 0%, var(--bg-2) 55%, var(--bg-3) 100%) fixed;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden; touch-action:manipulation;
+    user-select:none; -webkit-user-select:none;
+  }
+  .app{
+    height:100dvh; max-width:520px; margin:0 auto;
+    padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 14px);
+    display:flex; flex-direction:column; gap:10px;
+  }
+
+  header{display:flex;align-items:center;justify-content:space-between;min-height:34px}
+  .brand{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:650;letter-spacing:.2px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent)}
+  .icon-btn{
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft);
+    width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+    font-size:16px;cursor:pointer;backdrop-filter:blur(8px);
+  }
+  .icon-btn:active{transform:scale(.94)}
+
+  .timer{text-align:center;padding-top:2px}
+  .time{font-size:clamp(46px,15vw,64px);font-weight:700;line-height:1;letter-spacing:-1.5px;
+        font-variant-numeric:tabular-nums}
+  .time.done{color:var(--accent)}
+  .phase{
+    margin-top:8px; display:inline-flex; align-items:center; gap:9px;
+    padding:7px 14px; border-radius:999px; background:var(--surface); border:1px solid var(--line);
+    backdrop-filter:blur(10px); font-size:14.5px; font-weight:600;
+  }
+  .phase .num{font-size:11px;font-weight:700;color:var(--accent-ink);background:var(--accent);
+              border-radius:999px;padding:2px 7px;letter-spacing:.3px}
+  .phase .sub{color:var(--ink-soft);font-weight:550}
+
+  .segs{display:flex;gap:5px;padding:0 4px}
+  .seg{flex:1;height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+  .seg > i{display:block;height:100%;width:0;border-radius:999px;
+           background:linear-gradient(90deg,var(--accent-2),var(--accent));transition:width .12s linear}
+
+  .stage{flex:1;min-height:0;display:grid;place-items:center;position:relative}
+  .stage::before{
+    content:"";position:absolute;width:82%;aspect-ratio:1;border-radius:50%;
+    background:radial-gradient(circle, color-mix(in srgb, var(--accent) 14%, transparent) 0%, transparent 68%);
+    filter:blur(8px);animation:breathe 6s ease-in-out infinite;
+  }
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:.65}50%{transform:scale(1.06);opacity:.95}}
+  svg#mouth{width:100%;height:100%;position:relative;display:block;overflow:visible}
+
+  .arch,#gumUpper,#gumLower{transition:opacity .45s ease}
+  .dim{opacity:.42}
+  .gum{fill:none;stroke:url(#gumGrad);stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+  .tooth-fill{fill:url(#toothGrad)}
+  .tooth-line{fill:none;stroke:var(--tooth-edge);stroke-width:.55;stroke-linejoin:round}
+  .groove{fill:none;stroke:var(--groove);stroke-width:.5;stroke-linecap:round;opacity:.75}
+  .face{fill:var(--accent);opacity:0;transition:opacity .3s ease}
+  .halo{fill:none;stroke:var(--accent);stroke-linecap:round;opacity:0;transition:opacity .35s ease}
+  .halo.on{opacity:.34;animation:haloPulse 1.6s ease-in-out infinite}
+  @keyframes haloPulse{0%,100%{opacity:.2}50%{opacity:.45}}
+  .face.on{opacity:.88;animation:facePulse 1.6s ease-in-out infinite}
+  @keyframes facePulse{0%,100%{opacity:.58}50%{opacity:.95}}
+  #brush{opacity:0;transition:opacity .35s ease}
+  #brush.on{opacity:1}
+  .label{fill:var(--ink-soft);font-size:6.5px;font-weight:600;letter-spacing:1.1px;
+         text-anchor:middle;opacity:.75;font-family:inherit}
+
+  .controls{display:flex;align-items:center;justify-content:center;gap:12px}
+  button{font-family:inherit}
+  .btn{
+    border:1px solid var(--line);background:var(--surface);color:var(--ink);
+    height:56px;padding:0 18px;border-radius:18px;font-size:15px;font-weight:600;
+    cursor:pointer;backdrop-filter:blur(10px);display:flex;align-items:center;gap:7px;
+    transition:transform .12s ease, opacity .2s ease;
+  }
+  .btn:active{transform:scale(.96)}
+  .btn-primary{
+    flex:1;justify-content:center;height:60px;border:none;
+    background:linear-gradient(135deg,var(--accent-2),var(--accent));
+    color:var(--accent-ink);font-size:17px;font-weight:700;letter-spacing:.2px;box-shadow:var(--shadow);
+  }
+  .hint{text-align:center;font-size:12.5px;color:var(--ink-soft);min-height:16px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand"><span class="dot"></span> Zahnzeit</div>
+    <button class="icon-btn" id="soundBtn" aria-label="Ton an/aus">🔔</button>
+  </header>
+
+  <div class="timer">
+    <div class="time" id="time">2:00</div>
+    <div class="phase">
+      <span class="num" id="phaseNum">1/6</span>
+      <span id="phaseName">Kauflächen</span>
+      <span class="sub" id="phaseSub">· oben</span>
+    </div>
+  </div>
+
+  <div class="segs" id="segs"></div>
+
+  <div class="stage">
+    <svg id="mouth" viewBox="-70 -90 140 200" aria-hidden="true">
+      <defs>
+        <linearGradient id="toothGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="var(--tooth-a)"/>
+          <stop offset="62%"  stop-color="var(--tooth-a)"/>
+          <stop offset="100%" stop-color="var(--tooth-b)"/>
+        </linearGradient>
+        <linearGradient id="gumGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="var(--gum-a)"/>
+          <stop offset="100%" stop-color="var(--gum-b)"/>
+        </linearGradient>
+        <filter id="soft" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="2.4"/>
+        </filter>
+        <filter id="lift" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="0.9" stdDeviation="1.1" flood-color="#5A3320" flood-opacity=".28"/>
+        </filter>
+      </defs>
+
+      <g id="world">
+        <g id="gumUpper"></g>
+        <g id="gumLower"></g>
+        <g id="archUpper" class="arch"></g>
+        <g id="archLower" class="arch"></g>
+        <text class="label" id="gapLabel" x="0" y="0">K · A · I</text>
+      </g>
+
+      <g id="brush">
+        <rect x="-11" y="-5" width="22" height="10" rx="5" fill="var(--accent-2)" opacity=".5" filter="url(#soft)"/>
+        <rect x="-9" y="-3.2" width="18" height="6.4" rx="3.2" fill="var(--accent-2)" opacity=".8"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="hint" id="hint">20 Sekunden pro Fläche · 2 Minuten gesamt</div>
+
+  <div class="controls">
+    <button class="btn" id="resetBtn" aria-label="Zurücksetzen">↺</button>
+    <button class="btn btn-primary" id="mainBtn">Putzen starten</button>
+    <button class="btn" id="skipBtn" aria-label="Nächste Fläche">↦</button>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ======================= Ablauf: KAI, je oben & unten ======================= */
+  const PHASE_SEC = 20;
+  const PHASES = [
+    { s:'kau',    a:'upper' }, { s:'kau',    a:'lower' },
+    { s:'aussen', a:'upper' }, { s:'aussen', a:'lower' },
+    { s:'innen',  a:'upper' }, { s:'innen',  a:'lower' },
+  ];
+  const S_NAME = { kau:'Kauflächen', aussen:'Außenflächen', innen:'Innenflächen' };
+  const A_NAME = { upper:'oben', lower:'unten' };
+  const TIPS = {
+    kau:    'Kleine kreisende Bewegungen auf den Kauflächen',
+    aussen: 'Außen kreisen – vom Zahnfleisch zum Zahn',
+    innen:  'Innen sanft auswischen, Rot nach Weiß'
+  };
+  const TOTAL_MS = PHASES.length * PHASE_SEC * 1000;
+
+  /* ======================= Zahnformen =======================
+     Lokales System je Zahn:  x = mesial/distal (seitlich),
+                              -y = außen (bukkal/labial), +y = innen (lingual)   */
+  const n = v => (Math.round(v*100)/100);
+  const P = (x,y) => n(x)+','+n(y);
+
+  function toothPath(kind, w, h){
+    const W = w/2, H = h/2;
+    switch(kind){
+      /* Schneidezahn: flache Schneide außen, leicht konkav (Cingulum) innen */
+      case 'incisor':
+        return 'M'+P(-W,-H*0.05)
+             + 'C'+P(-W*0.99,-H*0.85)+' '+P(-W*0.55,-H)+' '+P(0,-H)
+             + 'C'+P(W*0.55,-H)+' '+P(W*0.99,-H*0.85)+' '+P(W,-H*0.05)
+             + 'C'+P(W*0.8,H*0.95)+' '+P(W*0.3,H*0.55)+' '+P(0,H*0.5)
+             + 'C'+P(-W*0.3,H*0.55)+' '+P(-W*0.8,H*0.95)+' '+P(-W,-H*0.05)+'Z';
+      /* Eckzahn: Spitze nach außen, kräftiger Körper */
+      case 'canine':
+        return 'M'+P(-W,H*0.18)
+             + 'C'+P(-W*0.95,-H*0.3)+' '+P(-W*0.5,-H*0.88)+' '+P(0,-H)
+             + 'C'+P(W*0.5,-H*0.88)+' '+P(W*0.95,-H*0.3)+' '+P(W,H*0.18)
+             + 'C'+P(W*0.82,H*0.92)+' '+P(-W*0.82,H*0.92)+' '+P(-W,H*0.18)+'Z';
+      /* Prämolar: ovaler Körper, zwei Höcker */
+      case 'premolar':
+        return 'M'+P(0,-H)
+             + 'C'+P(W*0.72,-H*0.97)+' '+P(W*0.99,-H*0.5)+' '+P(W*0.9,H*0.02)
+             + 'C'+P(W*0.82,H*0.6)+' '+P(W*0.42,H*0.97)+' '+P(0,H*0.9)
+             + 'C'+P(-W*0.42,H*0.97)+' '+P(-W*0.82,H*0.6)+' '+P(-W*0.9,H*0.02)
+             + 'C'+P(-W*0.99,-H*0.5)+' '+P(-W*0.72,-H*0.97)+' '+P(0,-H)+'Z';
+      /* Molar: rechteckiger Körper mit vier Höckerbäuchen */
+      default:
+        return 'M'+P(-W*0.42,-H*0.96)
+             + 'Q'+P(0,-H*0.74)+' '+P(W*0.42,-H*0.96)
+             + 'Q'+P(W*0.98,-H*0.86)+' '+P(W*0.95,-H*0.3)
+             + 'Q'+P(W*0.8,0)+' '+P(W*0.95,H*0.3)
+             + 'Q'+P(W*0.98,H*0.86)+' '+P(W*0.42,H*0.96)
+             + 'Q'+P(0,H*0.74)+' '+P(-W*0.42,H*0.96)
+             + 'Q'+P(-W*0.98,H*0.86)+' '+P(-W*0.95,H*0.3)
+             + 'Q'+P(-W*0.8,0)+' '+P(-W*0.95,-H*0.3)
+             + 'Q'+P(-W*0.98,-H*0.86)+' '+P(-W*0.42,-H*0.96)+'Z';
+    }
+  }
+
+  function groovePath(kind, w, h){
+    const W = w/2, H = h/2;
+    if (kind === 'molar')
+      return 'M'+P(-W*0.58,0)+'Q'+P(0,H*0.12)+' '+P(W*0.58,0)
+           + 'M'+P(-W*0.12,-H*0.62)+'Q'+P(0,-H*0.2)+' '+P(W*0.05,-H*0.6)
+           + 'M'+P(-W*0.1,H*0.6)+'Q'+P(0,H*0.2)+' '+P(W*0.08,H*0.58);
+    if (kind === 'premolar')
+      return 'M'+P(-W*0.55,-H*0.05)+'Q'+P(0,H*0.14)+' '+P(W*0.55,-H*0.05);
+    if (kind === 'canine')
+      return 'M'+P(0,-H*0.72)+'Q'+P(W*0.06,-H*0.2)+' '+P(0,H*0.1);
+    return 'M'+P(-W*0.62,-H*0.42)+'Q'+P(0,-H*0.62)+' '+P(W*0.62,-H*0.42);
+  }
+
+  /* ======================= Bogen-Geometrie ======================= */
+  const KIND = ['incisor','incisor','canine','premolar','premolar','molar','molar'];
+  const DIMS = {
+    upper:{ w:[13.6,11.0,10.6,10.6,10.8,13.8,13.2], h:[7.6,7.0,10.0,11.2,11.6,13.6,13.2] },
+    lower:{ w:[ 8.6, 9.4,10.0,10.6,11.0,13.6,13.0], h:[6.6,6.8, 9.4,10.4,10.8,12.6,12.2] }
+  };
+  const BASE  = { rx:100, ry:165 };
+  const SPAN  = { upper:[186,354], lower:[174,6] };
+  const T_GAP = 0.65;     // Zahnzwischenraum
+  const Y_GAP = 34;       // Abstand Ober-/Unterkiefer
+  const NT = 14;
+
+  let seed = 20260919;
+  const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; };
+
+  function arcTable(rx, ry, a0deg, a1deg){
+    const steps = 1400, A0 = a0deg*Math.PI/180, A1 = a1deg*Math.PI/180, t = [{th:A0, s:0}];
+    let px = rx*Math.cos(A0), py = ry*Math.sin(A0), s = 0;
+    for (let i=1;i<=steps;i++){
+      const th = A0 + (A1-A0)*i/steps, x = rx*Math.cos(th), y = ry*Math.sin(th);
+      s += Math.hypot(x-px, y-py); px = x; py = y; t.push({th, s});
+    }
+    return t;
+  }
+  function thetaAt(t, s){
+    s = Math.max(0, Math.min(t[t.length-1].s, s));
+    let lo = 0, hi = t.length-1;
+    while (hi - lo > 1){ const m = (lo+hi) >> 1; if (t[m].s <= s) lo = m; else hi = m; }
+    const a = t[lo], b = t[hi], k = (b.s - a.s) ? (s - a.s)/(b.s - a.s) : 0;
+    return a.th + (b.th - a.th)*k;
+  }
+
+  const ARCH = {};
+  function layout(name){
+    const D = DIMS[name], [a0,a1] = SPAN[name];
+    const ws = [], hs = [], kinds = [];
+    for (let i=0;i<NT;i++){
+      const k = Math.round(Math.abs(i-(NT-1)/2) - 0.5);
+      ws.push(D.w[k]); hs.push(D.h[k]); kinds.push(KIND[k]);
+    }
+    const need = ws.reduce((a,b)=>a+b,0) + T_GAP*(NT-1);
+    const base = arcTable(BASE.rx, BASE.ry, a0, a1);
+    const f  = need / base[base.length-1].s;
+    const rx = BASE.rx*f, ry = BASE.ry*f;
+    const tbl = arcTable(rx, ry, a0, a1);
+    const A = { rx, ry, cx:0, cy:0, a0, a1, tbl, len:tbl[tbl.length-1].s, ws, hs, kinds };
+    ARCH[name] = A;
+    return A;
+  }
+  const AU = layout('upper'), AL = layout('lower');
+  /* Kiefer vertikal so setzen, dass zwischen den Bogenenden Y_GAP bleibt */
+  const endU = Math.sin(SPAN.upper[0]*Math.PI/180);   // negativ
+  const endL = Math.sin(SPAN.lower[0]*Math.PI/180);   // positiv
+  AU.cy = 0;
+  AL.cy = AU.cy + endU*AU.ry + Y_GAP - endL*AL.ry;
+
+  function atArc(A, u, offset){
+    const th = thetaAt(A.tbl, u*A.len);
+    let dx = Math.cos(th)/A.rx, dy = Math.sin(th)/A.ry;
+    const L = Math.hypot(dx,dy); dx/=L; dy/=L;
+    return { x: A.cx + A.rx*Math.cos(th) + dx*offset,
+             y: A.cy + A.ry*Math.sin(th) + dy*offset,
+             rot: Math.atan2(dy,dx)*180/Math.PI + 90 };
+  }
+
+  /* ======================= Rendering ======================= */
+  let clipId = 0;
+  function renderArch(name){
+    const A = ARCH[name];
+    let out = '', s = 0;
+    for (let i=0;i<NT;i++){
+      const w = A.ws[i], h = A.hs[i], kind = A.kinds[i];
+      const p = atArc(A, (s + w/2)/A.len, (rnd()-0.5)*0.7);
+      s += w + T_GAP;
+      const rot = p.rot + (rnd()-0.5)*4.5;
+      const d   = toothPath(kind, w, h);
+      const id  = 'tc' + (++clipId);
+      const H   = h/2, back = (kind === 'molar' || kind === 'premolar');
+
+      out += '<g transform="translate('+n(p.x)+','+n(p.y)+') rotate('+n(rot)+')">'
+           +  '<clipPath id="'+id+'"><path d="'+d+'"/></clipPath>'
+           +  '<path class="tooth-fill" d="'+d+'"/>'
+           +  (back ? '<path class="face f-kau" d="'+d+'"/>' : '')
+           +  '<g clip-path="url(#'+id+')">'
+           +    '<rect class="face f-aussen" x="'+n(-w)+'" y="'+n(-H-1)+'" width="'+n(2*w)+'" height="'+n(H*0.64+1)+'"/>'
+           +    '<rect class="face f-innen"  x="'+n(-w)+'" y="'+n(H*0.36)+'" width="'+n(2*w)+'" height="'+n(H*0.64+1)+'"/>'
+           +  '</g>'
+           +  '<path class="groove" d="'+groovePath(kind,w,h)+'"/>'
+           +  '<path class="tooth-line" d="'+d+'"/>'
+           + '</g>';
+    }
+    return out;
+  }
+
+  function archPath(A, offset){
+    const pts = [];
+    for (let i=0;i<=90;i++){
+      const q = atArc(A, i/90, offset);
+      pts.push((i ? 'L' : 'M') + P(q.x, q.y));
+    }
+    return pts.join('');
+  }
+  function renderGum(name){
+    const A = ARCH[name], hMax = Math.max(...A.hs), off = hMax/2 + 3.4;
+    return '<path class="gum" stroke-width="'+n(hMax+9)+'" d="'+archPath(A,0)+'"/>'
+         + '<path class="halo f-aussen" stroke-width="5.5" d="'+archPath(A, off)+'"/>'
+         + '<path class="halo f-innen"  stroke-width="5.5" d="'+archPath(A,-off)+'"/>';
+  }
+
+  const $ = s => document.querySelector(s);
+  const elUpper = $('#archUpper'), elLower = $('#archLower'), brush = $('#brush');
+  const gumUpper = $('#gumUpper'), gumLower = $('#gumLower');
+  gumUpper.innerHTML = renderGum('upper');
+  gumLower.innerHTML = renderGum('lower');
+  elUpper.innerHTML = renderArch('upper');
+  elLower.innerHTML = renderArch('lower');
+  elUpper.setAttribute('filter','url(#lift)');
+  elLower.setAttribute('filter','url(#lift)');
+
+  /* Mittiges Label zwischen die Kiefer + Bildausschnitt aus dem Inhalt ableiten */
+  $('#gapLabel').setAttribute('y', n(AU.cy + endU*AU.ry + Y_GAP/2 + 2));
+  (() => {
+    const bb = $('#world').getBBox();
+    const pad = Math.max(...AU.hs)/2 + 7;
+    $('#mouth').setAttribute('viewBox',
+      [n(bb.x-pad), n(bb.y-pad), n(bb.width+2*pad), n(bb.height+2*pad)].join(' '));
+  })();
+
+  /* Fortschrittsbalken */
+  const segs = [];
+  PHASES.forEach(() => {
+    const d = document.createElement('div'); d.className = 'seg';
+    const i = document.createElement('i'); d.appendChild(i);
+    $('#segs').appendChild(d); segs.push(i);
+  });
+
+  /* ======================= Zustand ======================= */
+  let elapsed = 0, running = false, startWall = 0, lastPhase = -1, wakeLock = null;
+  let sound = localStorage.getItem('zz-sound') !== 'off';
+  $('#soundBtn').textContent = sound ? '🔔' : '🔕';
+
+  /* ======================= Ton ======================= */
+  let actx = null;
+  function beep(freq, when=0, dur=0.16, gain=0.16){
+    if (!sound || !actx) return;
+    const t = actx.currentTime + when;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(actx.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function initAudio(){
+    if (!actx){ const C = window.AudioContext || window.webkitAudioContext; if (C) actx = new C(); }
+    if (actx && actx.state === 'suspended') actx.resume();
+  }
+  const cueSwitch = () => { beep(660,0); beep(880,0.13); };
+  const cueDone   = () => { beep(660,0); beep(880,0.16); beep(1175,0.32,0.45,0.2); };
+
+  /* ======================= Bildschirm wach halten ======================= */
+  async function lockScreen(){
+    try { if ('wakeLock' in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+  }
+  function unlockScreen(){ try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null; }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && running) lockScreen();
+  });
+
+  /* ======================= Darstellung ======================= */
+  const fmt = ms => {
+    const s = Math.max(0, Math.ceil(ms/1000));
+    return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+  };
+
+  function applyPhase(idx){
+    const done = idx >= PHASES.length;
+    const p = PHASES[Math.min(idx, PHASES.length-1)];
+    document.querySelectorAll('.on').forEach(e => e.classList.remove('on'));
+    [elUpper, elLower, gumUpper, gumLower].forEach(e => e.classList.remove('dim'));
+
+    if (done){
+      document.querySelectorAll('.face.f-aussen').forEach(e => e.classList.add('on'));
+      brush.classList.remove('on');
+      $('#phaseNum').textContent = '✓';
+      $('#phaseName').textContent = 'Fertig';
+      $('#phaseSub').textContent = '· alle Flächen geputzt';
+      $('#hint').textContent = 'Stark – zum Abschluss ausspucken, nicht nachspülen.';
+      $('#gapLabel').textContent = 'SAUBER';
+      return;
+    }
+    const up = p.a === 'upper';
+    (up ? [elLower, gumLower] : [elUpper, gumUpper]).forEach(e => e.classList.add('dim'));
+    (up ? [elUpper, gumUpper] : [elLower, gumLower])
+      .forEach(g => g.querySelectorAll('.f-' + p.s).forEach(e => e.classList.add('on')));
+
+    $('#phaseNum').textContent = (idx+1) + '/' + PHASES.length;
+    $('#phaseName').textContent = S_NAME[p.s];
+    $('#phaseSub').textContent = '· ' + A_NAME[p.a];
+    $('#hint').textContent = TIPS[p.s];
+    $('#gapLabel').textContent = 'K · A · I';
+  }
+
+  function moveBrush(idx, prog){
+    if (idx >= PHASES.length) return;
+    const p = PHASES[idx], A = ARCH[p.a], hMax = Math.max(...A.hs);
+    let u, offset;
+    if (p.s === 'kau'){
+      offset = 0;
+      const half = prog < 0.5 ? prog*2 : (prog-0.5)*2;
+      const tri  = half < 0.5 ? half*2 : 2 - half*2;
+      u = (prog < 0.5) ? 0.02 + 0.26*tri : 0.72 + 0.26*tri;   // erst links hinten, dann rechts
+    } else {
+      offset = (p.s === 'aussen' ? 1 : -1) * (hMax/2 + 3.4);
+      u = prog < 0.5 ? prog*2 : 2 - prog*2;
+    }
+    const q = atArc(A, u, offset);
+    brush.setAttribute('transform','translate('+n(q.x)+','+n(q.y)+') rotate('+n(q.rot)+')');
+    brush.classList.toggle('on', running);
+  }
+
+  function render(){
+    if (running) elapsed = Math.min(TOTAL_MS, Date.now() - startWall);
+    const idx  = Math.min(PHASES.length, Math.floor(elapsed / (PHASE_SEC*1000)));
+    const prog = (elapsed % (PHASE_SEC*1000)) / (PHASE_SEC*1000);
+
+    $('#time').textContent = fmt(TOTAL_MS - elapsed);
+    $('#time').classList.toggle('done', elapsed >= TOTAL_MS);
+    segs.forEach((el,i) => { el.style.width = (i < idx ? 100 : i === idx ? prog*100 : 0) + '%'; });
+
+    if (idx !== lastPhase){
+      if (running && lastPhase >= 0) (idx >= PHASES.length ? cueDone() : cueSwitch());
+      applyPhase(idx); lastPhase = idx;
+    }
+    moveBrush(idx, prog);
+    if (running && elapsed >= TOTAL_MS) pause(true);
+    if (running) requestAnimationFrame(render);
+  }
+
+  /* ======================= Steuerung ======================= */
+  function start(){
+    initAudio();
+    if (elapsed >= TOTAL_MS) elapsed = 0;
+    startWall = Date.now() - elapsed;
+    running = true;
+    $('#mainBtn').textContent = 'Pause';
+    brush.classList.add('on');
+    lockScreen();
+    requestAnimationFrame(render);
+  }
+  function pause(finished=false){
+    running = false;
+    $('#mainBtn').textContent = finished ? 'Nochmal' : 'Weiter';
+    brush.classList.remove('on');
+    unlockScreen(); render();
+  }
+  function reset(){
+    running = false; elapsed = 0; lastPhase = -1;
+    $('#mainBtn').textContent = 'Putzen starten';
+    brush.classList.remove('on');
+    unlockScreen(); render();
+  }
+  function skip(){
+    const idx = Math.floor(elapsed / (PHASE_SEC*1000));
+    elapsed = Math.min(TOTAL_MS, (idx+1) * PHASE_SEC*1000);
+    if (running) startWall = Date.now() - elapsed;
+    render();
+  }
+
+  $('#mainBtn').addEventListener('click', () => running ? pause() : start());
+  $('#resetBtn').addEventListener('click', reset);
+  $('#skipBtn').addEventListener('click', () => { initAudio(); skip(); });
+  $('#soundBtn').addEventListener('click', () => {
+    sound = !sound;
+    localStorage.setItem('zz-sound', sound ? 'on' : 'off');
+    $('#soundBtn').textContent = sound ? '🔔' : '🔕';
+    if (sound){ initAudio(); beep(880,0,0.12); }
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>

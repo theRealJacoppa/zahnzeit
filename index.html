@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zahnzeit">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F7E9D8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#231A15" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪥</text></svg>">
+<link rel="stylesheet" href="css/app.css">
+<title>Zahnzeit</title>
+</head>
+<body>
+
+<div class="app">
+  <div class="pages">
+    <section class="page on" id="pg-today"  aria-label="Heute"></section>
+    <section class="page"    id="pg-stats"  aria-label="Statistik"></section>
+    <section class="page"    id="pg-set"    aria-label="Einstellungen"></section>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab on" data-page="today" aria-label="Heute">
+      <svg viewBox="0 0 24 24"><path d="M9 11l2.5 2.5L15.5 9"/><rect x="3.5" y="4.5" width="17" height="16" rx="3.5"/><path d="M8 2.5v4M16 2.5v4"/></svg>
+      Heute
+    </button>
+    <button class="tab" data-page="stats" aria-label="Statistik">
+      <svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M22 20H2"/></svg>
+      Statistik
+    </button>
+    <button class="tab" data-page="set" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.5a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.03 1.56V21a2 2 0 11-4 0v-.1A1.7 1.7 0 008.4 19.3a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.56-1.03H3a2 2 0 110-4h.1A1.7 1.7 0 004.7 8.4a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9a1.7 1.7 0 001.03-1.56V3a2 2 0 114 0v.1a1.7 1.7 0 001.03 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9a1.7 1.7 0 001.56 1.03H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1.03z"/></svg>
+      Einstellungen
+    </button>
+  </nav>
+</div>
+
+<!-- ===================== Der Routine-Ablauf =====================
+     Eine einzige Vollbild-Ansicht mit vier Bühnen. Sie bleibt offen,
+     bis alle Schritte des Blocks durch sind. -->
+<div class="runview" id="run">
+
+  <div class="tv-head">
+    <button class="icon-btn" id="runClose" aria-label="Ablauf verlassen">✕</button>
+    <div class="who" id="runWho"></div>
+    <button class="icon-btn" id="runSound" aria-label="Ton an/aus">🔔</button>
+  </div>
+
+  <!-- Schrittkette: zeigt, wo man im Ablauf steht, und ist antippbar -->
+  <div class="runbar" id="runBar"></div>
+
+  <!-- Bühne 1: geführtes Putzen mit Kiefermodell -->
+  <div class="rstage" id="rsKai">
+    <div class="timer">
+      <div class="time" id="time">3:00</div>
+      <div class="phase">
+        <span class="num" id="phaseNum">1/6</span>
+        <span id="phaseName">Kauflächen</span>
+        <span class="sub" id="phaseSub">· oben</span>
+      </div>
+    </div>
+    <div class="segs" id="segs"></div>
+    <div class="stage">
+      <canvas id="scene"></canvas>
+      <div class="loading" id="loading">Modell lädt …</div>
+      <div class="fallback" id="fallback">
+        3D lässt sich hier nicht darstellen.<br><a href="zahn-2d.html">Zur 2D-Ansicht</a>
+      </div>
+    </div>
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <!-- Bühne 2: einfacher Countdown -->
+  <div class="rstage" id="rsTimer">
+    <div class="mini">
+      <div class="glyph" id="mvGlyph">🫧</div>
+      <div class="ringbig">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="43"/>
+          <circle class="bar" id="mvBar" cx="50" cy="50" r="43"
+                  stroke-dasharray="270.2 270.2"/>
+        </svg>
+        <div class="mid" id="mvNum">30</div>
+      </div>
+      <div class="steptitle" id="mvName"></div>
+      <div class="hint" id="mvHint"></div>
+    </div>
+  </div>
+
+  <!-- Bühne 3: nur abhaken -->
+  <div class="rstage" id="rsCheck">
+    <div class="mini">
+      <div class="glyph big" id="ckGlyph">🧵</div>
+      <div class="steptitle" id="ckName"></div>
+      <div class="hint" id="ckHint"></div>
+    </div>
+  </div>
+
+  <!-- Bühne 4: geschafft -->
+  <div class="rstage" id="rsDone">
+    <div class="mini">
+      <div class="glyph big" id="dnGlyph">🎉</div>
+      <div class="donetitle" id="dnTitle">Durch!</div>
+      <div class="hint" id="dnText"></div>
+    </div>
+  </div>
+
+  <canvas class="confetti" id="confetti"></canvas>
+
+  <div class="controls">
+    <button class="btn" id="runAux" aria-label="Zurücksetzen">↺</button>
+    <button class="btn btn-primary" id="runMain">Starten</button>
+    <button class="btn" id="runSkip" aria-label="Weiter">↦</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="scrim" data-close></div>
+  <div class="panel" id="sheetPanel"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="js/app.js"></script>
+<script>
+/* Sicherheitsnetz: per Doppelklick (file://) blockiert der Browser ES-Module */
+setTimeout(() => {
+  if (window.__zz) return;
+  document.querySelector('.app').innerHTML =
+    '<div style="padding:40px 22px;text-align:center;font-size:14.5px;line-height:1.6">' +
+    '<div style="font-size:40px;margin-bottom:12px">🪥</div>' +
+    'Zahnzeit konnte nicht starten.<br>Bitte über einen Webserver öffnen ' +
+    '(GitHub&nbsp;Pages oder <code>python3&nbsp;-m&nbsp;http.server</code>) – ' +
+    'beim Doppelklick blockiert der Browser ES-Module.<br><br>' +
+    '<a href="zahn-2d.html" style="color:#CE6F42">Zur einfachen 2D-Ansicht</a></div>';
+}, 2500);
+</script>
+</body>
+</html>
