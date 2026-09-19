@@ -57,3 +57,4 @@ for (const [name, now, log, wantAsk] of [
   console.log(`${ok ? '✓' : '✗'}  ${name.padEnd(36)} → ${g ? 'fragt nach' : 'fragt nicht'}`);
 }
 console.log(bad ? `\n${bad} Abweichung(en)` : '\nAlle Fälle wie erwartet.');
+process.exit(bad ? 1 : 0);

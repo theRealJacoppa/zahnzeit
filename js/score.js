@@ -19,6 +19,8 @@
    Wichtig für das Gefühl: Der laufende Tag wird nicht bestraft. Ein Block
    zählt erst, wenn seine Richtzeit plus zwei Stunden Kulanz vorbei ist.
    Morgens um 8 zieht die noch offene Abendroutine den Wert also nicht runter.
+   Und der Tag endet nicht um Mitternacht, sondern wenn die Abendroutine
+   nicht mehr auf ihn gebucht würde — siehe `counts()`.
    ===================================================================== */
 
 import * as S from './store.js';
@@ -35,24 +37,40 @@ const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
 
 /* ---------------------- Erfüllungsgrad eines Tages ---------------------- */
 
+/* Zählt dieser Block an diesem Tag schon mit — oder liegt er noch vor einem?
+   Zwei Gründe lassen ihn stehen:
+
+   • Seine Richtzeit plus Kulanz ist noch nicht vorbei.
+   • Der Tag ist für ihn überhaupt noch nicht zu Ende. Um 0:30 schlägt die
+     App die Abendroutine weiterhin als „Abends von gestern" vor — dann darf
+     die Statistik sie nicht im selben Moment schon als versäumt führen.
+     Maßstab ist dieselbe Funktion, nach der die Sitzung später einsortiert
+     würde (`dayForBlock`): Solange sie noch auf diesen Tag zeigt, läuft er.
+     Für den heutigen Tag greift das nicht — der zeigt immer auf sich selbst
+     und käme sonst nie zur Abrechnung.
+
+   Angefasst ist angefasst: ist an dem Tag schon etwas eingetragen, zählt der
+   Block in jedem Fall. */
+function counts(block, key, now, touched){
+  if (touched) return true;
+  const due = S.parseDay(key);
+  due.setHours((block.hint ?? 12) + GRACE_H, 0, 0, 0);
+  if (now < due) return false;
+  if (key !== S.dayKey(now) && S.dayForBlock(block, now) === key) return false;
+  return true;
+}
+
 /* Liefert { soll, ist, quote, timed, gesamt } für einen Tagesschlüssel.
    `soll` ist 0, wenn an dem Tag (noch) nichts fällig war — solche Tage
    fließen gar nicht in die Rechnung ein. */
 export function dayStats(key, now = new Date()){
-  const isToday = key === S.dayKey(now);
   const rec = S.log()[key] || {};
   let soll = 0, ist = 0, done = 0, total = 0, timed = 0;
 
   for (const b of S.blocks()){
     if (!b.items.length) continue;
     const got = rec[b.id] || {};
-    const touched = b.items.some(id => got[id]);
-    if (isToday && !touched){
-      /* Noch nicht angefasst und die Richtzeit ist noch nicht durch?
-         Dann ist der Block schlicht noch nicht dran. */
-      const due = new Date(now); due.setHours((b.hint ?? 12) + GRACE_H, 0, 0, 0);
-      if (now < due) continue;
-    }
+    if (!counts(b, key, now, b.items.some(id => got[id]))) continue;
     for (const id of b.items){
       const item = S.itemById(id); if (!item) continue;
       const w = weightOf(item);
@@ -165,11 +183,8 @@ export function byBlock(n, now = new Date()){
     let done = 0, total = 0;
     for (let i = 0; i < n; i++){
       const key = S.dayKey(S.addDays(now, -i));
-      if (i === 0){
-        const due = new Date(now); due.setHours((b.hint ?? 12) + GRACE_H, 0, 0, 0);
-        const got = S.log()[key]?.[b.id] || {};
-        if (now < due && !b.items.some(id => got[id])) continue;
-      }
+      const got = S.log()[key]?.[b.id] || {};
+      if (!counts(b, key, now, b.items.some(id => got[id]))) continue;
       const p = S.blockProgress(key, b.id);
       done += p.done; total += p.total;
     }
@@ -185,11 +200,8 @@ export function byItem(n, now = new Date()){
     const key = S.dayKey(S.addDays(now, -i));
     for (const b of S.blocks()){
       if (!b.items.length) continue;
-      if (i === 0){
-        const due = new Date(now); due.setHours((b.hint ?? 12) + GRACE_H, 0, 0, 0);
-        const got = S.log()[key]?.[b.id] || {};
-        if (now < due && !b.items.some(id => got[id])) continue;
-      }
+      const got = S.log()[key]?.[b.id] || {};
+      if (!counts(b, key, now, b.items.some(id => got[id]))) continue;
       for (const id of b.items){
         const r = rows.get(id); if (!r) continue;
         r.total++;

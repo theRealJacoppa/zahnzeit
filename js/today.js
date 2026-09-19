@@ -312,7 +312,6 @@ export function render(){
 }
 
 function head(sc, now){
-  const trendable = sc.tracked >= 8;
   return `<div class="topbar">
       <div>
         <h1>Heute</h1>
@@ -322,7 +321,7 @@ function head(sc, now){
         <span style="color:var(--accent);font-weight:750">${sc.value}</span>
         <span style="color:var(--ink-soft)">Routine</span>
       </button>
-    </div>` + (trendable ? '' : '');
+    </div>`;
 }
 
 /* Wenn die App aus dem Hintergrund zurückkommt, kann ein anderer Block
