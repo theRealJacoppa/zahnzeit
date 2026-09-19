@@ -52,7 +52,11 @@ async function lockScreen(){
 }
 function unlockScreen(){ try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null; }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && run.open) lockScreen();
+  if (document.visibilityState !== 'visible' || !run.open) return;
+  lockScreen();
+  /* Der Countdown hat im Hintergrund womöglich keine Ticks bekommen —
+     die verstrichene Zeit steht in `endAt` und wird hier sofort sichtbar. */
+  if (run.mode === 'timer' && cd.running) cdTick();
 });
 
 /* -------------------------------- Zustand -------------------------------- */
@@ -64,8 +68,10 @@ const run = {
 
 /* Putzvorgang */
 const kai = { running:false, elapsed:0, startWall:0, lastPhase:-1, totalMs:180000, over:false };
-/* Countdown */
-const cd  = { running:false, left:0, total:30, tid:0, over:false };
+/* Countdown — `left` ist die Restzeit in Sekunden. Während er läuft, wird sie
+   aus `endAt` abgeleitet, nicht heruntergezählt: iOS drosselt Intervalle im
+   Hintergrund oder hält sie ganz an, ein Zähler liefe dann nach. */
+const cd  = { running:false, left:0, total:30, tid:0, over:false, endAt:0 };
 
 const segs = PHASES.map(() => {
   const d = document.createElement('div'); d.className = 'seg';
@@ -194,9 +200,9 @@ function cdDraw(){
 }
 function cdStop(){ clearInterval(cd.tid); cd.tid = 0; cd.running = false; }
 function cdTick(){
-  cd.left = Math.max(0, cd.left - 0.1);
+  if (cd.running) cd.left = Math.max(0, (cd.endAt - Date.now()) / 1000);
   cdDraw();
-  if (cd.left <= 0){
+  if (cd.running && cd.left <= 0){
     cdStop(); cd.over = true;
     unlockScreen(); cueStep(); setCtl();
   }
@@ -204,9 +210,16 @@ function cdTick(){
 function cdStart(){
   initAudio(); lockScreen();
   if (cd.left <= 0){ cd.left = cd.total; cd.over = false; }
+  cd.endAt = Date.now() + cd.left * 1000;
   cd.running = true;
   clearInterval(cd.tid); cd.tid = setInterval(cdTick, 100);
   setCtl();
+}
+/* Beim Anhalten die Restzeit festschreiben — sie ist bis zu einem
+   Zehntel alt, wenn sie allein aus dem letzten Tick stammt. */
+function cdPause(){
+  cd.left = Math.max(0, (cd.endAt - Date.now()) / 1000);
+  cdStop(); cdDraw(); setCtl();
 }
 
 /* ============================== Steuerung ============================== */
@@ -394,7 +407,7 @@ $('#runMain').addEventListener('click', () => {
     kai.running ? kaiPause() : kaiStart();
   } else if (run.mode === 'timer'){
     if (cd.over) return stepDone(true, cd.total);
-    cd.running ? (cdStop(), setCtl()) : cdStart();
+    cd.running ? cdPause() : cdStart();
   } else if (run.mode === 'check'){
     stepDone(false, 0);
   }
